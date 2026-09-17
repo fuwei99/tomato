@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">番茄合体</string>
+    <string name="tab_todo">待办</string>
+    <string name="tab_collections">待办集</string>
+    <string name="tab_lock">锁机</string>
+    <string name="tab_stats">统计数据</string>
+    <string name="tab_me">我的</string>
+    <string name="study_mode">点击开启学霸模式</string>
+    <string name="required_permission">必开\n权限</string>
+    <string name="start">开始</string>
+    <string name="minutes">%1$d 分钟</string>
+</resources>

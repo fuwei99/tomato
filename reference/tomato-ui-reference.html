@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>番茄Todo · 界面复刻</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  :root{
+    --teal:#009186;
+    --teal-dark:#00796b;
+    --bg:#e7f0ec;
+    --ink:#37474f;
+  }
+  body{
+    background:#1b2126;
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;
+    padding:16px;
+  }
+  .phone{
+    width:360px; height:800px;
+    background:#000; border-radius:6px;
+    box-shadow:0 24px 60px rgba(0,0,0,.6), 0 0 0 8px #10151a;
+    overflow:hidden; position:relative;
+  }
+  .screen{ width:100%; height:100%; position:relative; background:#fafafa; }
+  .page{ position:absolute; inset:0; display:none; flex-direction:column; background:#fafafa; }
+  .page.active{ display:flex; animation:fadein .22s ease; }
+  @keyframes fadein{ from{opacity:.4} to{opacity:1} }
+
+  /* ===== 头部 ===== */
+  .header{
+    background:linear-gradient(180deg,#008a8a 0%,#099594 53%,#14a09f 79%,#1fa7a3 100%);
+    color:#fff; flex-shrink:0; padding-bottom:0;
+  }
+  .statusbar{ display:flex; justify-content:space-between; align-items:center; padding:0 14px; height:33px; }
+  .sb-left,.sb-right{ display:flex; align-items:center; gap:5px; }
+  .sb-time{ font-size:12.5px; font-weight:600; letter-spacing:.2px; }
+  .sb-5g{ font-size:7px; font-weight:700; display:flex; align-items:flex-end; gap:1px; }
+  .sb-5g .bars{ display:flex; align-items:flex-end; gap:.5px; margin-left:1px; }
+  .sb-5g .bars i{ width:2px; background:#fff; border-radius:1px; display:block; }
+  .sb-5g .bars i:nth-child(1){height:3px}.sb-5g .bars i:nth-child(2){height:4.5px}
+  .sb-5g .bars i:nth-child(3){height:6px}.sb-5g .bars i:nth-child(4){height:7.5px}
+  .titlebar{ display:flex; justify-content:space-between; align-items:flex-start; padding:0 14px; min-height:57px; }
+  .tb-title{ font-size:15px; font-weight:700; letter-spacing:.5px; line-height:1.2; }
+  .pill{
+    margin-top:5px; display:inline-block; font-size:10px; color:#fff;
+    padding:2px 7px; border-radius:999px;
+    background:rgba(0,40,35,.18); border:1px solid rgba(255,255,255,.85);
+    letter-spacing:.3px;
+  }
+  .tb-right{ display:flex; align-items:center; gap:9px; padding-top:6px; flex-shrink:0; }
+  .perm{ font-size:10px; font-weight:500; line-height:1.2; text-align:center; letter-spacing:.3px; }
+  .hicon{ width:20px; height:20px; color:#fff; flex-shrink:0; }
+
+  /* ===== 内容区 ===== */
+  .content{ flex:1; overflow-y:auto; scrollbar-width:none; }
+  .content::-webkit-scrollbar{ display:none; }
+
+  /* ===== 待办卡片 ===== */
+  .todo-list{ padding:9px 10px 14px; display:flex; flex-direction:column; gap:6px; }
+  .tcard{
+    position:relative; border-radius:7px; overflow:hidden; min-height:68px;
+    padding:13px 14px 11px; display:flex; justify-content:space-between;
+    box-shadow:0 1px 4px rgba(50,90,80,.16); color:#fff; flex-shrink:0;
+  }
+  .tcard .tinfo{ position:relative; z-index:2; display:flex; flex-direction:column; justify-content:space-between; }
+  .tcard .tname{ font-size:15px; font-weight:500; letter-spacing:.3px; text-shadow:0 1px 4px rgba(0,0,0,.18); }
+  .tcard .tmin{ font-size:12px; opacity:.95; text-shadow:0 1px 4px rgba(0,0,0,.18); }
+  .tcard .tstart{
+    position:relative; z-index:2; align-self:center; font-size:15px; letter-spacing:1px;
+    text-shadow:0 1px 4px rgba(0,0,0,.2); padding:4px 2px;
+  }
+  .tcard.light{ color:#4c4c4c; }
+  .tcard.light .tname,.tcard.light .tmin,.tcard.light .tstart{ text-shadow:none; }
+  .deco{ position:absolute; pointer-events:none; z-index:1; }
+
+  /* ===== 卡片配色/装饰 ===== */
+  .c-leaf{ background:linear-gradient(105deg,#92a6c3 0%,#a9bad0 55%,#c0cedb 100%); }
+  .c-petal{ background:linear-gradient(100deg,#b6bcc2 0%,#d3d5d1 55%,#e2e1d8 100%); }
+  .c-pika{ background:linear-gradient(100deg,#efa17f 0%,#f3b294 55%,#f6c0a8 100%); }
+  .c-cloud{ background:linear-gradient(105deg,#7b90c1 0%,#9fa4cb 45%,#d3b0c6 100%); }
+  .c-sunset{
+    background:
+      radial-gradient(circle at 60% 26%, rgba(255,243,196,.95), rgba(255,243,196,0) 42%),
+      linear-gradient(180deg,#c5a059 0%,#d9bd7c 48%,#e8d298 100%);
+  }
+  .c-moon{ background:linear-gradient(115deg,#12907f 0%,#1ba390 50%,#2cbdae 100%); }
+  .c-bottle{ background:linear-gradient(180deg,#16606a 0%,#0f4953 55%,#0a333d 100%); }
+  .c-sky{ background:linear-gradient(110deg,#4c7ec3 0%,#5d8ccf 55%,#6e9ada 100%); }
+  .c-chair{ background:linear-gradient(105deg,#a596a6 0%,#c2b1b9 55%,#d3c5c7 100%); }
+
+  /* ===== 待办集 ===== */
+  .coll-head{
+    background:#fff; display:flex; align-items:center; padding:0 12px 0 0;
+    min-height:48px; box-shadow:0 1px 3px rgba(70,110,100,.08); position:relative;
+  }
+  .coll-head::before{ content:""; width:4px; height:26px; background:var(--teal); border-radius:0 2px 2px 0; margin-right:10px; }
+  .coll-title{ font-size:13px; font-weight:700; color:var(--ink); flex:1; }
+  .coll-icons{ display:flex; align-items:center; gap:12px; color:#7e9691; }
+  .coll-icons svg{ width:17px; height:17px; }
+  .coll-list{ padding:8px 4px 12px; display:flex; flex-direction:column; gap:5px; background:#fbfcfc; min-height:100%; }
+  .coll-list .tcard{ min-height:53px; border-radius:6px; padding:9px 12px 8px; }
+  .coll-list .tname{ font-size:14px; }
+  .cc-pink{ background:linear-gradient(100deg,#f2a3bd,#f4aec5); }
+  .cc-gray{ background:linear-gradient(100deg,#6c6c6c,#757575); }
+  .cc-navy{ background:linear-gradient(100deg,#2a3153,#2e3860); }
+
+  /* ===== 统计页 ===== */
+  .stats-wrap{ padding:9px 9px 14px; display:flex; flex-direction:column; gap:14px; }
+  .scard{
+    background:#fff; border-radius:12px; padding:8px 9px 9px;
+    box-shadow:0 1px 4px rgba(60,100,90,.08);
+  }
+  .scard-head{ display:flex; align-items:center; }
+  .scard-title{ font-size:14px; font-weight:700; color:var(--ink); line-height:1.2; }
+  .scard-title.teal{ color:var(--teal-dark); }
+  .scard-date{ font-size:11px; color:#7d939d; margin-left:6px; }
+  .scard-date.teal{ color:var(--teal); }
+  .scard-spacer{ flex:1; }
+  .mini-ic{ width:16px; height:16px; color:#455a64; }
+  .mini-ic.teal{ color:var(--teal); }
+  .arrows{ display:flex; align-items:center; gap:7px; margin-left:8px; }
+  .arrows svg{ width:13px; height:13px; }
+  .share-txt{ font-size:12px; color:var(--teal); margin-left:8px; white-space:nowrap; }
+
+  .big3{ display:flex; margin-top:5px; white-space:nowrap; }
+  .big3 .col{ flex:1; text-align:center; min-width:0; }
+  .big3 .col:nth-child(2){ flex:1.22; }
+  .big3 .lbl{ font-size:9.5px; color:#4b5f66; margin-bottom:2px; line-height:1.2; }
+  .bignum{ font-size:22px; font-weight:300; color:#3a4f52; letter-spacing:-.6px; line-height:1; }
+  .bigunit{ font-size:9px; color:#3a4f52; margin-left:1px; }
+
+  .day2{ display:flex; justify-content:space-between; margin-top:5px; padding:0 20px; white-space:nowrap; }
+  .day2 .col{ text-align:center; }
+  .day2 .lbl{ font-size:9.5px; color:#4b5f66; margin-bottom:2px; line-height:1.2; }
+
+  .seg{
+    display:flex; margin:10px auto 0; width:max-content;
+    border:1px solid #a8d5cd; border-radius:13px; overflow:hidden;
+  }
+  .seg span{ padding:3px 13px; font-size:11px; color:#5eb0a5; border-right:1px solid #a8d5cd; }
+  .seg span:last-child{ border-right:none; }
+  .seg span.on{ background:#62b3a8; color:#fff; }
+
+  .pie-svg{ width:100%; height:auto; display:block; margin-top:4px; }
+  .pie-note{ text-align:center; font-size:11px; color:#455a64; letter-spacing:.5px; }
+  .record-btn{
+    display:block; margin:10px auto 4px; background:#d8ebe6; color:var(--teal-dark);
+    font-size:11px; padding:5px 22px; border-radius:999px; letter-spacing:.5px;
+  }
+  .legend{ display:grid; grid-template-columns:1fr 1fr; gap:10px 8px; margin-top:10px; }
+  .lg-item{ display:flex; align-items:center; }
+  .lg-dot{ width:8px; height:8px; border-radius:50%; margin-right:6px; flex-shrink:0; }
+  .lg-main{ flex:1; min-width:0; }
+  .lg-name{ font-size:11px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lg-time{ font-size:9.5px; color:#90a4ae; margin-top:1px; }
+  .lg-pct{ font-size:11px; color:var(--ink); margin-left:4px; }
+
+  .month-blank{ height:30px; }
+
+  /* ===== 占位页 ===== */
+  .placeholder{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#9ab0ab; gap:10px; }
+  .placeholder svg{ width:54px; height:54px; opacity:.5; }
+  .placeholder p{ font-size:14px; }
+
+  /* ===== 底部导航 ===== */
+  .nav{
+    height:52px; background:#fff; display:flex; flex-shrink:0;
+    border-top:.5px solid #e3e9e7; padding-bottom:2px;
+  }
+  .nav-item{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    color:#3c4c52; cursor:pointer; user-select:none;
+  }
+  .nav-item span{ font-size:10px; }
+  .nav-item svg{ width:20px; height:20px; }
+  .nav-item.on{ color:var(--teal); }
+  .nav-item.on span{ font-weight:700; }
+
+  @media (max-width:392px){
+    body{ padding:0; background:#000; }
+    .phone{ width:100vw; height:100vh; border-radius:0; box-shadow:none; }
+  }
+  @media (max-height:800px) and (min-width:393px){
+    .phone{ height:100vh; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ SVG 图标库 ============ -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-todo" viewBox="0 0 24 24">
+      <path d="M4 8.8h10" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+      <path d="M4 15.6h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="i-coll" viewBox="0 0 24 24">
+      <path d="M4 6h7" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <path d="M4 12h11.5" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <path d="M4 18h16" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24">
+      <rect x="5" y="10.5" width="14" height="10" rx="2.4" fill="currentColor"/>
+      <path d="M8.4 10.5V8a3.6 3.6 0 0 1 7.2 0v2.5" stroke="currentColor" stroke-width="2.4" fill="none"/>
+      <circle cx="12" cy="14.6" r="1.7" fill="#fff"/>
+      <rect x="11.2" y="15.4" width="1.6" height="2.6" rx=".8" fill="#fff"/>
+    </symbol>
+    <symbol id="i-stats" viewBox="0 0 24 24">
+      <path d="M12 3.5A8.5 8.5 0 1 0 20.5 12H12Z" fill="currentColor"/>
+      <path d="M14.6 2.6a8.5 8.5 0 0 1 6.8 6.8h-6.8Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-me" viewBox="0 0 24 24">
+      <circle cx="12" cy="7.6" r="4.1" fill="currentColor"/>
+      <path d="M4.4 20.6c0-4.5 3.4-6.9 7.6-6.9s7.6 2.4 7.6 6.9Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-bar" viewBox="0 0 24 24">
+      <rect x="4" y="12" width="3.6" height="8" rx="1.8" fill="currentColor"/>
+      <rect x="10.2" y="4" width="3.6" height="16" rx="1.8" fill="currentColor"/>
+      <rect x="16.4" y="8.5" width="3.6" height="11.5" rx="1.8" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24">
+      <path d="M10 2h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+      <circle cx="12" cy="13.5" r="8" stroke="currentColor" stroke-width="2.2" fill="none"/>
+      <path d="M12 13.5V8.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24">
+      <path d="M12 4.5v15M4.5 12h15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="i-plusplus" viewBox="0 0 24 24">
+      <path d="M10 7.5v11M4.5 13h11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+      <path d="M18.5 3v6M15.5 6h6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24">
+      <circle cx="12" cy="4.6" r="2" fill="currentColor"/>
+      <circle cx="12" cy="12" r="2" fill="currentColor"/>
+      <circle cx="12" cy="19.4" r="2" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-medal" viewBox="0 0 24 24">
+      <circle cx="12" cy="9" r="5.6" fill="currentColor"/>
+      <path d="M8.8 13.6 6.4 21l5.6-2.8L17.6 21l-2.4-7.4Z" fill="currentColor"/>
+      <circle cx="12" cy="9" r="2.4" fill="#fff"/>
+    </symbol>
+    <symbol id="i-share" viewBox="0 0 24 24">
+      <circle cx="17.5" cy="5.5" r="2.8" fill="currentColor"/>
+      <circle cx="6.5" cy="12" r="2.8" fill="currentColor"/>
+      <circle cx="17.5" cy="18.5" r="2.8" fill="currentColor"/>
+      <path d="m9 10.6 6.2-3.7M9 13.4l6.2 3.7" stroke="currentColor" stroke-width="1.8" fill="none"/>
+    </symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.2" stroke="currentColor" stroke-width="1.9" fill="none"/>
+      <path d="M3.5 9.6h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none"/>
+      <path d="M8.5 14.5h6m0 0-2-2m2 2-2 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </symbol>
+    <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="M15.5 4 7.5 12l8 8" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m8.5 4 8 8-8 8" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+    <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m5 9 7 7 7-7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="phone"><div class="screen">
+
+  <!-- ================= 页面1：待办 ================= -->
+  <section class="page active" id="todo">
+    <div class="header">
+      <div class="statusbar">
+        <div class="sb-left">
+          <span class="sb-time">1:27</span>
+          <svg width="12" height="12" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="17" rx="3" stroke="#fff" stroke-width="2.4" fill="none"/><text x="12" y="17" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">1</text></svg>
+          <svg width="14" height="12" viewBox="0 0 24 24" fill="#fff"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+        </div>
+        <div class="sb-right">
+          <svg width="12" height="12" viewBox="0 0 24 24"><path d="M6.5 6.5 17.5 17.5 12 22V2l5.5 4.5L6.5 17.5" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          <svg width="14" height="12" viewBox="0 0 24 24"><path d="M12 5a7 7 0 0 1 7 7M12 9a3 3 0 0 1 3 3" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24"><path d="M20.5 14.5A8.8 8.8 0 1 1 9.5 3.5 7.2 7.2 0 0 0 20.5 14.5Z" fill="#fff"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24"><path d="M6 16v-4.5a6 6 0 0 1 12 0V16l1.8 2.4H4.2Z" fill="#fff"/><path d="M3 3l18 18" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <span class="sb-5g">5G<span class="bars"><i></i><i></i><i></i><i></i></span></span>
+          <span class="sb-5g">5G<span class="bars"><i></i><i></i><i></i><i></i></span></span>
+          <svg width="29" height="13" viewBox="0 0 35 16">
+            <rect x="1" y="1.2" width="28.5" height="13.6" rx="4.4" fill="rgba(255,255,255,.3)" stroke="#fff" stroke-width="1.1"/>
+            <rect x="2.8" y="3" width="24.9" height="10" rx="3" fill="#43d854"/>
+            <text x="15.2" y="11" font-size="8.6" fill="#0b4d14" text-anchor="middle" font-weight="700">94</text>
+            <rect x="31" y="5.2" width="2.6" height="5.6" rx="1.3" fill="#fff"/>
+          </svg>
+          <svg width="9" height="12" viewBox="0 0 12 18"><path d="M7 1 2 10h3.4L4.8 17 10 7.6H6.6Z" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="titlebar">
+        <div class="tb-left">
+          <div class="tb-title">待办</div>
+          <span class="pill">点击开启学霸模式</span>
+        </div>
+        <div class="tb-right">
+          <span class="perm">必开<br>权限</span>
+          <svg class="hicon"><use href="#i-bar"/></svg>
+          <svg class="hicon"><use href="#i-timer"/></svg>
+          <svg class="hicon"><use href="#i-plus"/></svg>
+          <svg class="hicon"><use href="#i-dots"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="todo-list">
+
+        <div class="tcard c-leaf">
+          <svg class="deco" style="right:0;top:0;width:58%;height:100%" viewBox="0 0 250 112" preserveAspectRatio="xMidYMid slice">
+            <path d="M235 -6 C205 30 168 58 118 76" stroke="#6d4436" stroke-width="2.4" fill="none"/>
+            <g>
+              <path d="M0 0Q-8 -15 0 -33Q8 -15 0 0" transform="translate(222,18) rotate(-52) scale(1.15)" fill="#a93428"/>
+              <path d="M0 0Q-8 -15 0 -33Q8 -15 0 0" transform="translate(198,36) rotate(-118) scale(1.3)" fill="#c1483a"/>
+              <path d="M0 0Q-8 -15 0 -33Q8 -15 0 0" transform="translate(180,52) rotate(-70) scale(1.05)" fill="#8e2b22"/>
+              <path d="M0 0Q-8 -15 0 -33Q8 -15 0 0" transform="translate(206,55) rotate(-30) scale(1.1)" fill="#d05a48"/>
+              <path d="M0 0Q-8 -15 0 -33Q8 -15 0 0" transform="translate(158,64) rotate(-140) scale(1.2)" fill="#b8402f"/>
+              <path d="M0 0Q-8 -15 0 -33Q8 -15 0 0" transform="translate(138,74) rotate(-88) scale(.95)" fill="#9c2f24"/>
+              <path d="M0 0Q-8 -15 0 -33Q8 -15 0 0" transform="translate(122,78) rotate(-160) scale(.85)" fill="#c74a38"/>
+            </g>
+          </svg>
+          <div class="tinfo"><div class="tname">背诵单词</div><div class="tmin">35 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+
+        <div class="tcard c-petal">
+          <svg class="deco" style="right:0;top:0;width:75%;height:100%" viewBox="0 0 320 112" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="pg1" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#e2bd7c"/><stop offset=".55" stop-color="#efd494"/><stop offset="1" stop-color="#f7e8bd"/>
+              </linearGradient>
+            </defs>
+            <path d="M150 118 C185 45 268 8 320 2 C252 32 205 72 190 122 Z" fill="url(#pg1)"/>
+            <path d="M232 122 C252 78 296 48 320 42 C282 62 262 92 254 124 Z" fill="#f0d9a2" opacity=".9"/>
+          </svg>
+          <div class="tinfo"><div class="tname">考研阅读两篇</div><div class="tmin">40 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+
+        <div class="tcard c-pika">
+          <svg class="deco" style="left:44%;top:50%;transform:translateY(-50%);width:78px;height:58px" viewBox="0 0 130 96">
+            <path d="M42 38 26 6l24 22Z" fill="#f6d41f"/>
+            <path d="M26 6l5.5 7-7.5 3.4Z" fill="#3a3a3a"/>
+            <path d="M86 30 104 4 92 34Z" fill="#f6d41f"/>
+            <path d="M104 4l-6.5 6 4.5 5.4Z" fill="#3a3a3a"/>
+            <ellipse cx="64" cy="62" rx="27" ry="28" fill="#f6d41f"/>
+            <path d="M88 70 C100 62 108 66 112 74" stroke="#e8b800" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <circle cx="54" cy="55" r="3" fill="#222"/>
+            <circle cx="72" cy="55" r="3" fill="#222"/>
+            <circle cx="45" cy="66" r="5.4" fill="#e8604e" opacity=".75"/>
+            <circle cx="81" cy="66" r="5.4" fill="#e8604e" opacity=".75"/>
+            <path d="M58 63 q5 5 10 0" stroke="#222" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <rect x="100" y="72" width="15" height="11" rx="2" fill="#fff" stroke="#a8988a" stroke-width="1.4"/>
+            <path d="M115 75 q5 2 0 6" stroke="#a8988a" stroke-width="1.4" fill="none"/>
+            <path d="M38 92 q26 -10 52 0" stroke="#d9a13c" stroke-width="2" fill="none" opacity=".6"/>
+          </svg>
+          <div class="tinfo"><div class="tname">英语改错</div><div class="tmin">25 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+
+        <div class="tcard c-cloud">
+          <svg class="deco" style="right:0;top:0;width:85%;height:100%" viewBox="0 0 360 112" preserveAspectRatio="xMidYMid slice">
+            <g fill="#e9c9d6" opacity=".95">
+              <ellipse cx="300" cy="102" rx="130" ry="34"/>
+              <ellipse cx="180" cy="112" rx="120" ry="30"/>
+            </g>
+            <g fill="#f6ecf1" opacity=".9">
+              <ellipse cx="292" cy="66" rx="88" ry="26"/>
+              <ellipse cx="352" cy="48" rx="56" ry="20"/>
+              <ellipse cx="238" cy="80" rx="66" ry="20"/>
+            </g>
+            <g fill="#ffffff" opacity=".72">
+              <ellipse cx="130" cy="52" rx="52" ry="14"/>
+              <ellipse cx="182" cy="40" rx="36" ry="11"/>
+              <ellipse cx="86" cy="66" rx="40" ry="10"/>
+            </g>
+          </svg>
+          <div class="tinfo"><div class="tname">机械听课</div><div class="tmin">120 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+
+        <div class="tcard c-sunset">
+          <svg class="deco" style="left:0;bottom:0;width:100%;height:62%" viewBox="0 0 430 70" preserveAspectRatio="xMidYMax slice">
+            <path d="M0 70 L0 48 Q110 18 214 42 Q330 68 430 38 L430 70 Z" fill="#2e2317"/>
+            <g fill="#241a10">
+              <circle cx="252" cy="26" r="5.4"/>
+              <path d="M252 31 l-2.4 20h4.8Z"/>
+              <path d="M250 36 232 30l1-2.6 18 5Z"/>
+              <path d="M254 36 272 30l-1-2.6-18 5Z"/>
+              <path d="M250 50l-6 18 3 .6 6-17Z"/>
+              <path d="M254 50l6 18-3 .6-6-17Z"/>
+            </g>
+          </svg>
+          <div class="tinfo"><div class="tname">机械刷题</div><div class="tmin">180 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+
+        <div class="tcard c-moon">
+          <svg class="deco" style="left:56%;top:30%;width:32px;height:32px" viewBox="0 0 60 60">
+            <path d="M40 8 A21 21 0 1 0 55 30 A17 17 0 0 1 40 8" fill="#fdfdf2" opacity=".92"/>
+            <circle cx="14" cy="14" r="1.5" fill="#fff" opacity=".8"/>
+            <circle cx="24" cy="44" r="1.1" fill="#fff" opacity=".6"/>
+          </svg>
+          <div class="tinfo"><div class="tname">线性代数听课</div><div class="tmin">60 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+
+        <div class="tcard c-bottle">
+          <svg class="deco" style="left:50%;top:50%;transform:translate(-58%,-46%);width:27px;height:46px" viewBox="0 0 92 150">
+            <ellipse cx="46" cy="138" rx="34" ry="7" fill="#fff" opacity=".18"/>
+            <rect x="36" y="8" width="20" height="16" rx="2.5" fill="#e5cd72" opacity=".95"/>
+            <rect x="35" y="22" width="22" height="6" rx="2" fill="#f2e6b0" opacity=".9"/>
+            <path d="M38 28 v22 c-11 8 -16 18 -16 31 v52 a9 9 0 0 0 9 9 h30 a9 9 0 0 0 9 -9 v-52 c0-13 -5-23 -16-31 v-22" fill="rgba(230,245,245,.14)" stroke="rgba(255,255,255,.7)" stroke-width="2.2"/>
+            <path d="M30 60 c-4 5 -6 10 -6 18" stroke="rgba(255,255,255,.55)" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="tinfo"><div class="tname">旋转体听课刷题</div><div class="tmin">60 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+
+        <div class="tcard c-sky">
+          <svg class="deco" style="right:0;top:0;width:80%;height:100%" viewBox="0 0 340 112" preserveAspectRatio="xMidYMid slice">
+            <ellipse cx="230" cy="40" rx="120" ry="26" fill="#fff" opacity=".12"/>
+            <ellipse cx="120" cy="86" rx="100" ry="22" fill="#fff" opacity=".10"/>
+          </svg>
+          <div class="tinfo"><div class="tname">政治听课</div><div class="tmin">60 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+
+        <div class="tcard c-chair light">
+          <svg class="deco" style="right:14%;bottom:6px;width:40px;height:46px" viewBox="0 0 80 92">
+            <g stroke="#1d1d1d" stroke-width="5" stroke-linecap="round" fill="none">
+              <path d="M30 8v52M56 8v52M30 14h26"/>
+              <path d="M22 60h42"/>
+              <path d="M27 60 25 88M59 60l2 28"/>
+              <path d="M30 26h26"/>
+            </g>
+          </svg>
+          <div class="tinfo"><div class="tname">设计毕业设计报告</div><div class="tmin">35 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="nav">
+      <div class="nav-item on" data-page="todo"><svg><use href="#i-todo"/></svg><span>待办</span></div>
+      <div class="nav-item" data-page="collections"><svg><use href="#i-coll"/></svg><span>待办集</span></div>
+      <div class="nav-item" data-page="lock"><svg><use href="#i-lock"/></svg><span>锁机</span></div>
+      <div class="nav-item" data-page="stats"><svg><use href="#i-stats"/></svg><span>统计数据</span></div>
+      <div class="nav-item" data-page="me"><svg><use href="#i-me"/></svg><span>我的</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 页面2：待办集 ================= -->
+  <section class="page" id="collections" style="background:#fbfcfc">
+    <div class="header">
+      <div class="statusbar">
+        <div class="sb-left">
+          <span class="sb-time">1:46</span>
+          <svg width="12" height="12" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="17" rx="3" stroke="#fff" stroke-width="2.4" fill="none"/><text x="12" y="17" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">1</text></svg>
+          <svg width="14" height="12" viewBox="0 0 24 24" fill="#fff"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+        </div>
+        <div class="sb-right">
+          <svg width="12" height="12" viewBox="0 0 24 24"><path d="M6.5 6.5 17.5 17.5 12 22V2l5.5 4.5L6.5 17.5" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          <svg width="14" height="12" viewBox="0 0 24 24"><path d="M12 5a7 7 0 0 1 7 7M12 9a3 3 0 0 1 3 3" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24"><path d="M20.5 14.5A8.8 8.8 0 1 1 9.5 3.5 7.2 7.2 0 0 0 20.5 14.5Z" fill="#fff"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24"><path d="M6 16v-4.5a6 6 0 0 1 12 0V16l1.8 2.4H4.2Z" fill="#fff"/><path d="M3 3l18 18" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <span class="sb-5g">5G<span class="bars"><i></i><i></i><i></i><i></i></span></span>
+          <span class="sb-5g">5G<span class="bars"><i></i><i></i><i></i><i></i></span></span>
+          <svg width="29" height="13" viewBox="0 0 35 16">
+            <rect x="1" y="1.2" width="28.5" height="13.6" rx="4.4" fill="rgba(255,255,255,.3)" stroke="#fff" stroke-width="1.1"/>
+            <rect x="2.8" y="3" width="24.9" height="10" rx="3" fill="#43d854"/>
+            <text x="15.2" y="11" font-size="8.6" fill="#0b4d14" text-anchor="middle" font-weight="700">100</text>
+            <rect x="31" y="5.2" width="2.6" height="5.6" rx="1.3" fill="#fff"/>
+          </svg>
+          <svg width="9" height="12" viewBox="0 0 12 18"><path d="M7 1 2 10h3.4L4.8 17 10 7.6H6.6Z" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="titlebar">
+        <div class="tb-left">
+          <div class="tb-title">待办集</div>
+          <span class="pill">点击开启学霸模式</span>
+        </div>
+        <div class="tb-right">
+          <span class="perm">必开<br>权限</span>
+          <svg class="hicon"><use href="#i-bar"/></svg>
+          <svg class="hicon"><use href="#i-timer"/></svg>
+          <svg class="hicon"><use href="#i-plusplus"/></svg>
+          <svg class="hicon"><use href="#i-dots"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="coll-head">
+        <div class="coll-title">10.30任务</div>
+        <div class="coll-icons">
+          <svg><use href="#i-chev-d"/></svg>
+          <svg><use href="#i-stats"/></svg>
+          <svg><use href="#i-gear"/></svg>
+          <svg><use href="#i-plus"/></svg>
+        </div>
+      </div>
+      <div class="coll-list">
+        <div class="tcard cc-pink">
+          <div class="tinfo"><div class="tname">凸轮机构</div><div class="tmin">120 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+        <div class="tcard cc-gray">
+          <div class="tinfo"><div class="tname">数学试卷</div><div class="tmin">25 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+        <div class="tcard cc-navy">
+          <div class="tinfo"><div class="tname">清理房间</div><div class="tmin">35 分钟</div></div>
+          <div class="tstart">开始</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <div class="nav-item" data-page="todo"><svg><use href="#i-todo"/></svg><span>待办</span></div>
+      <div class="nav-item on" data-page="collections"><svg><use href="#i-coll"/></svg><span>待办集</span></div>
+      <div class="nav-item" data-page="lock"><svg><use href="#i-lock"/></svg><span>锁机</span></div>
+      <div class="nav-item" data-page="stats"><svg><use href="#i-stats"/></svg><span>统计数据</span></div>
+      <div class="nav-item" data-page="me"><svg><use href="#i-me"/></svg><span>我的</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 页面3：统计数据 ================= -->
+  <section class="page" id="stats" style="background:linear-gradient(180deg,#20aaaa 0%,#3db1b1 16%,#63bebe 34%,#8bcccc 52%,#b1d9d9 70%,#d3e6e6 86%,#eaf1f1 100%)">
+    <div class="header">
+      <div class="statusbar">
+        <div class="sb-left">
+          <span class="sb-time">1:32</span>
+          <svg width="12" height="12" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="17" rx="3" stroke="#fff" stroke-width="2.4" fill="none"/><text x="12" y="17" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">1</text></svg>
+          <svg width="14" height="12" viewBox="0 0 24 24" fill="#fff"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+        </div>
+        <div class="sb-right">
+          <svg width="12" height="12" viewBox="0 0 24 24"><path d="M6.5 6.5 17.5 17.5 12 22V2l5.5 4.5L6.5 17.5" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          <svg width="14" height="12" viewBox="0 0 24 24"><path d="M12 5a7 7 0 0 1 7 7M12 9a3 3 0 0 1 3 3" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24"><path d="M20.5 14.5A8.8 8.8 0 1 1 9.5 3.5 7.2 7.2 0 0 0 20.5 14.5Z" fill="#fff"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24"><path d="M6 16v-4.5a6 6 0 0 1 12 0V16l1.8 2.4H4.2Z" fill="#fff"/><path d="M3 3l18 18" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <span class="sb-5g">5G<span class="bars"><i></i><i></i><i></i><i></i></span></span>
+          <span class="sb-5g">5G<span class="bars"><i></i><i></i><i></i><i></i></span></span>
+          <svg width="29" height="13" viewBox="0 0 35 16">
+            <rect x="1" y="1.2" width="28.5" height="13.6" rx="4.4" fill="rgba(255,255,255,.3)" stroke="#fff" stroke-width="1.1"/>
+            <rect x="2.8" y="3" width="24.9" height="10" rx="3" fill="#43d854"/>
+            <text x="15.2" y="11" font-size="8.6" fill="#0b4d14" text-anchor="middle" font-weight="700">96</text>
+            <rect x="31" y="5.2" width="2.6" height="5.6" rx="1.3" fill="#fff"/>
+          </svg>
+          <svg width="9" height="12" viewBox="0 0 12 18"><path d="M7 1 2 10h3.4L4.8 17 10 7.6H6.6Z" fill="#fff"/></svg>
+        </div>
+      </div>
+      <div class="titlebar" style="align-items:center">
+        <div class="tb-title">统计数据</div>
+        <div class="tb-right" style="padding-top:0">
+          <svg class="hicon"><use href="#i-bar"/></svg>
+          <svg class="hicon"><use href="#i-timer"/></svg>
+          <svg class="hicon"><use href="#i-medal"/></svg>
+          <svg class="hicon"><use href="#i-dots"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="stats-wrap">
+
+        <!-- 累计专注 -->
+        <div class="scard">
+          <div class="scard-head">
+            <div class="scard-title">累计专注</div>
+            <svg class="mini-ic" style="margin-left:10px"><use href="#i-cal"/></svg>
+            <div class="scard-spacer"></div>
+            <svg class="mini-ic"><use href="#i-share"/></svg>
+          </div>
+          <div class="big3">
+            <div class="col">
+              <div class="lbl">次数</div>
+              <span class="bignum">337</span>
+            </div>
+            <div class="col">
+              <div class="lbl">时长</div>
+              <span class="bignum">342</span><span class="bigunit">小时</span><span class="bignum">11</span><span class="bigunit">分钟</span>
+            </div>
+            <div class="col">
+              <div class="lbl">日均时长</div>
+              <span class="bignum">4</span><span class="bigunit">小时</span><span class="bignum">57</span><span class="bigunit">分钟</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 当日专注 -->
+        <div class="scard">
+          <div class="scard-head">
+            <div class="scard-title">当日专注</div>
+            <div class="scard-date">2026-09-16</div>
+            <div class="scard-spacer"></div>
+            <div class="arrows">
+              <svg class="mini-ic teal"><use href="#i-chev-l"/></svg>
+              <svg class="mini-ic teal"><use href="#i-chev-r"/></svg>
+            </div>
+          </div>
+          <div class="day2">
+            <div class="col">
+              <div class="lbl">次数</div>
+              <span class="bignum">0</span>
+            </div>
+            <div class="col">
+              <div class="lbl">时长</div>
+              <span class="bignum">0</span><span class="bigunit">分钟</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 专注时长分布 -->
+        <div class="scard">
+          <div class="scard-head" style="white-space:nowrap">
+            <div class="scard-title teal">专注时长分布</div>
+            <div class="scard-date teal">2026-04-17 ~ 2026-09-18</div>
+            <div class="scard-spacer"></div>
+            <span class="share-txt">分享</span>
+            <div class="arrows">
+              <svg class="mini-ic teal"><use href="#i-chev-l"/></svg>
+              <svg class="mini-ic teal"><use href="#i-chev-r"/></svg>
+            </div>
+          </div>
+          <div class="seg">
+            <span>日</span><span>周</span><span>月</span><span class="on">自定义</span>
+          </div>
+
+          <svg class="pie-svg" viewBox="0 0 322 196">
+            <g id="pie"></g>
+            <g font-size="11" fill="#546e7a">
+              <text x="186" y="122">数学1000题</text>
+              <line x1="213" y1="132" x2="231" y2="146" stroke="#90a4ae" stroke-width="1"/>
+              <text x="235" y="150">36小时51分</text>
+              <text x="26" y="46">13小时8分</text>
+              <line x1="89" y1="54" x2="101" y2="70" stroke="#90a4ae" stroke-width="1"/>
+              <text x="103" y="76">数学学习</text>
+              <text x="48" y="18">2小时0分</text>
+              <line x1="119" y1="24" x2="128" y2="36" stroke="#90a4ae" stroke-width="1"/>
+              <text x="122" y="44" font-size="10">英语阅读练习-翻译-作文</text>
+              <text x="140" y="60" font-size="10">机械学习</text>
+            </g>
+            <text x="161" y="184" font-size="11" fill="#455a64" text-anchor="middle" letter-spacing=".5">总 计 53 小时 54 分 钟　日 均 21 分 钟</text>
+          </svg>
+
+          <div class="record-btn">查看专注记录</div>
+
+          <div class="legend">
+            <div class="lg-item"><i class="lg-dot" style="background:#ef8b9c"></i><div class="lg-main"><div class="lg-name">数学1000题</div><div class="lg-time">36小时51分</div></div><span class="lg-pct">68.4%</span></div>
+            <div class="lg-item"><i class="lg-dot" style="background:#93c0bf"></i><div class="lg-main"><div class="lg-name">数学学习</div><div class="lg-time">13小时8分</div></div><span class="lg-pct">24.4%</span></div>
+            <div class="lg-item"><i class="lg-dot" style="background:#d5e8e8"></i><div class="lg-main"><div class="lg-name">英语阅读练习-翻译-作文</div><div class="lg-time">2小时0分</div></div><span class="lg-pct">3.7%</span></div>
+            <div class="lg-item"><i class="lg-dot" style="background:#64919e"></i><div class="lg-main"><div class="lg-name">机械学习</div><div class="lg-time">1小时30分</div></div><span class="lg-pct">2.8%</span></div>
+            <div class="lg-item"><i class="lg-dot" style="background:#f2d489"></i><div class="lg-main"><div class="lg-name">锁机</div><div class="lg-time">25分钟</div></div><span class="lg-pct">0.8%</span></div>
+          </div>
+        </div>
+
+        <!-- 本月专注时段分布 -->
+        <div class="scard">
+          <div class="scard-head">
+            <div class="scard-title teal">本月专注时段分布</div>
+            <div class="scard-date teal">2026年09月</div>
+            <div class="scard-spacer"></div>
+            <div class="arrows">
+              <svg class="mini-ic teal"><use href="#i-chev-l"/></svg>
+              <svg class="mini-ic teal"><use href="#i-chev-r"/></svg>
+            </div>
+          </div>
+          <div class="month-blank"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="nav">
+      <div class="nav-item" data-page="todo"><svg><use href="#i-todo"/></svg><span>待办</span></div>
+      <div class="nav-item" data-page="collections"><svg><use href="#i-coll"/></svg><span>待办集</span></div>
+      <div class="nav-item" data-page="lock"><svg><use href="#i-lock"/></svg><span>锁机</span></div>
+      <div class="nav-item on" data-page="stats"><svg><use href="#i-stats"/></svg><span>统计数据</span></div>
+      <div class="nav-item" data-page="me"><svg><use href="#i-me"/></svg><span>我的</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 占位：锁机 ================= -->
+  <section class="page" id="lock">
+    <div class="header">
+      <div class="statusbar">
+        <div class="sb-left"><span class="sb-time">1:46</span></div>
+      </div>
+      <div class="titlebar" style="align-items:center"><div class="tb-title">锁机</div></div>
+    </div>
+    <div class="content">
+      <div class="placeholder">
+        <svg><use href="#i-lock"/></svg>
+        <p>界面复刻演示 · 此页未提供截图</p>
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-item" data-page="todo"><svg><use href="#i-todo"/></svg><span>待办</span></div>
+      <div class="nav-item" data-page="collections"><svg><use href="#i-coll"/></svg><span>待办集</span></div>
+      <div class="nav-item on" data-page="lock"><svg><use href="#i-lock"/></svg><span>锁机</span></div>
+      <div class="nav-item" data-page="stats"><svg><use href="#i-stats"/></svg><span>统计数据</span></div>
+      <div class="nav-item" data-page="me"><svg><use href="#i-me"/></svg><span>我的</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 占位：我的 ================= -->
+  <section class="page" id="me">
+    <div class="header">
+      <div class="statusbar">
+        <div class="sb-left"><span class="sb-time">1:46</span></div>
+      </div>
+      <div class="titlebar" style="align-items:center"><div class="tb-title">我的</div></div>
+    </div>
+    <div class="content">
+      <div class="placeholder">
+        <svg><use href="#i-me"/></svg>
+        <p>界面复刻演示 · 此页未提供截图</p>
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-item" data-page="todo"><svg><use href="#i-todo"/></svg><span>待办</span></div>
+      <div class="nav-item" data-page="collections"><svg><use href="#i-coll"/></svg><span>待办集</span></div>
+      <div class="nav-item" data-page="lock"><svg><use href="#i-lock"/></svg><span>锁机</span></div>
+      <div class="nav-item" data-page="stats"><svg><use href="#i-stats"/></svg><span>统计数据</span></div>
+      <div class="nav-item on" data-page="me"><svg><use href="#i-me"/></svg><span>我的</span></div>
+    </div>
+  </section>
+
+</div></div>
+
+<script>
+  // ===== 页面切换 =====
+  function showPage(id){
+    document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
+    const c = document.querySelector('#' + id + ' .content');
+    if(c) c.scrollTop = 0;
+  }
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-page]');
+    if(t){ showPage(t.dataset.page); history.replaceState(null,'','#'+t.dataset.page); }
+  });
+  const h = location.hash.replace('#','');
+  if(h && document.getElementById(h.split('@')[0])) showPage(h.split('@')[0]);
+  const sm = location.hash.match(/scroll=(\d+)/);
+  if(sm){ const c=document.querySelector('.page.active .content'); if(c) setTimeout(()=>c.scrollTop=+sm[1],50); }
+
+  // ===== 饼图生成 =====
+  (function(){
+    const g = document.getElementById('pie');
+    if(!g) return;
+    const data = [
+      ['数学1000题', 68.4, '#ef8b9c'],
+      ['数学学习', 24.4, '#93c0bf'],
+      ['英语阅读练习-翻译-作文', 3.7, '#d5e8e8'],
+      ['机械学习', 2.8, '#64919e'],
+      ['锁机', 0.8, '#f2d489']
+    ];
+    const cx=161, cy=88, r=71;
+    const rad = d => d*Math.PI/180;
+    let a = -90;
+    data.forEach(([name,pct,color]) => {
+      const a2 = a + pct*3.6;
+      const x0 = cx + r*Math.cos(rad(a)),  y0 = cy + r*Math.sin(rad(a));
+      const x1 = cx + r*Math.cos(rad(a2)), y1 = cy + r*Math.sin(rad(a2));
+      const large = (a2-a) > 180 ? 1 : 0;
+      const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d', `M${cx} ${cy} L${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`);
+      p.setAttribute('fill', color);
+      g.appendChild(p);
+      a = a2;
+    });
+  })();
+</script>
+</body>
+</html>
