@@ -2,6 +2,7 @@ package com.tomato.app.ui.data
 
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,13 +34,14 @@ import com.tomato.app.ui.components.SunsetDecoration
 
 // ===== 渐变工具 =====
 
+// 说明：Color 是 value class，不能做 vararg 参数，故写死 3 段渐变
 /** 斜向渐变（≈ CSS 100~115deg：左上 → 右下） */
-internal fun diag(vararg colors: Color): Brush =
-    Brush.linearGradient(colors.toList(), start = Offset.Zero, end = Offset.Infinite)
+internal fun diag(c1: Color, c2: Color, c3: Color): Brush =
+    Brush.linearGradient(listOf(c1, c2, c3), start = Offset.Zero, end = Offset.Infinite)
 
 /** 竖向渐变（180deg） */
-internal fun vert(vararg colors: Color): Brush =
-    Brush.verticalGradient(colors.toList())
+internal fun vert(c1: Color, c2: Color, c3: Color): Brush =
+    Brush.verticalGradient(listOf(c1, c2, c3))
 
 // ===== 待办页数据 =====
 

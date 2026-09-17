@@ -121,14 +121,14 @@ fun ChairDecoration(modifier: Modifier = Modifier) {
         val w = size.width
         val h = size.height
         val c = Color(0xFF1D1D1D)
-        val st = Stroke(width = h * 0.045f, cap = StrokeCap.Round)
-        drawLine(c, Offset(w * 0.37f, h * 0.10f), Offset(w * 0.37f, h * 0.66f), st)
-        drawLine(c, Offset(w * 0.70f, h * 0.10f), Offset(w * 0.70f, h * 0.66f), st)
-        drawLine(c, Offset(w * 0.37f, h * 0.17f), Offset(w * 0.70f, h * 0.17f), st)
-        drawLine(c, Offset(w * 0.37f, h * 0.36f), Offset(w * 0.70f, h * 0.36f), st)
-        drawLine(c, Offset(w * 0.27f, h * 0.66f), Offset(w * 0.80f, h * 0.66f), st)
-        drawLine(c, Offset(w * 0.33f, h * 0.66f), Offset(w * 0.30f, h * 0.98f), st)
-        drawLine(c, Offset(w * 0.74f, h * 0.66f), Offset(w * 0.78f, h * 0.98f), st)
+        val lw = h * 0.045f
+        drawLine(c, Offset(w * 0.37f, h * 0.10f), Offset(w * 0.37f, h * 0.66f), lw, StrokeCap.Round)
+        drawLine(c, Offset(w * 0.70f, h * 0.10f), Offset(w * 0.70f, h * 0.66f), lw, StrokeCap.Round)
+        drawLine(c, Offset(w * 0.37f, h * 0.17f), Offset(w * 0.70f, h * 0.17f), lw, StrokeCap.Round)
+        drawLine(c, Offset(w * 0.37f, h * 0.36f), Offset(w * 0.70f, h * 0.36f), lw, StrokeCap.Round)
+        drawLine(c, Offset(w * 0.27f, h * 0.66f), Offset(w * 0.80f, h * 0.66f), lw, StrokeCap.Round)
+        drawLine(c, Offset(w * 0.33f, h * 0.66f), Offset(w * 0.30f, h * 0.98f), lw, StrokeCap.Round)
+        drawLine(c, Offset(w * 0.74f, h * 0.66f), Offset(w * 0.78f, h * 0.98f), lw, StrokeCap.Round)
     }
 }
 

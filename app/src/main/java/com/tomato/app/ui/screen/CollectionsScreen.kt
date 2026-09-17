@@ -61,7 +61,7 @@ fun CollectionsScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 4.dp, top = 8.dp, bottom = 12.dp),
+            contentPadding = PaddingValues(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             collections.forEach { collection ->
