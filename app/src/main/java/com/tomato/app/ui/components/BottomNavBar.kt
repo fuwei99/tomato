@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,7 +35,12 @@ fun BottomNavBar(
     onSelect: (Tab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier.fillMaxWidth().background(White)) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .background(White)
+            .navigationBarsPadding()
+    ) {
         Box(
             Modifier
                 .fillMaxWidth()

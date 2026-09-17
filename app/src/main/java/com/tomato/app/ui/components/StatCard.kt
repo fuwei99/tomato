@@ -52,6 +52,8 @@ import com.tomato.app.ui.theme.TealSegmentLine
 import com.tomato.app.ui.theme.TealSegmentOff
 import com.tomato.app.ui.theme.TealSegmentOn
 import com.tomato.app.ui.theme.White
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * 统计页卡片：宽 342dp（左右边距 9dp）、圆角 12dp、padding(8,9,9,9)、1dp 阴影。
@@ -213,12 +215,15 @@ fun SegmentedControl(
 
 // ===== 饼图 =====
 
-/** 饼图设计稿：viewBox 322×196，圆心 (161,88)，半径 71。起点 −90°，顺时针。 */
+/**
+ * 饼图设计稿：viewBox 322×196，圆心 (161,88)，半径 71。起点 −90°，顺时针。
+ * 标签按扇区中线角度动态布局：右侧左对齐、左侧右对齐，并做简单的纵向避让。
+ */
 @Composable
 fun FocusPieChart(
     slices: List<PieSlice>,
     modifier: Modifier = Modifier,
-    note: String = "总 计 53 小时 54 分 钟　日 均 21 分 钟"
+    note: String = ""
 ) {
     val measurer = rememberTextMeasurer()
 
@@ -231,8 +236,24 @@ fun FocusPieChart(
         val cx = 161f * k
         val cy = 88f * k
         val r = 71f * k
+        val lineH = 12.5f * k
+
+        fun label(text: String, x: Float, y: Float, alignRight: Boolean, fontSize: Float = 10.5f) {
+            val style = TextStyle(fontSize = fontSize.sp, color = PieLabelText)
+            val layout = measurer.measure(text, style)
+            val left = if (alignRight) x - layout.size.width else x
+            drawText(
+                textMeasurer = measurer,
+                text = text,
+                topLeft = Offset(left, y - fontSize * 0.80f * k),
+                style = style
+            )
+        }
 
         var angle = -90f
+        var lastRightY = -Float.MAX_VALUE
+        var lastLeftY = -Float.MAX_VALUE
+
         slices.forEach { s ->
             val sweep = s.percent * 360f
             drawArc(
@@ -243,51 +264,53 @@ fun FocusPieChart(
                 topLeft = Offset(cx - r, cy - r),
                 size = Size(r * 2, r * 2)
             )
+
+            if (s.percent >= 0.02f) {
+                val mid = angle + sweep / 2f
+                val rad = Math.toRadians(mid.toDouble())
+                val ux = cos(rad).toFloat()
+                val uy = sin(rad).toFloat()
+
+                val p0 = Offset(cx + ux * r, cy + uy * r)
+                val p1 = Offset(cx + ux * r * 1.18f, cy + uy * r * 1.18f)
+                drawLine(color = PieLabelLine, start = p0, end = p1, strokeWidth = 1f * k)
+
+                val onRight = ux >= 0f
+                var ly = if (onRight) maxOf(p1.y, lastRightY + lineH * 2f)
+                else maxOf(p1.y, lastLeftY + lineH * 2f)
+                ly = ly.coerceIn(16f * k, (196f - 20f) * k)
+                if (onRight) lastRightY = ly else lastLeftY = ly
+
+                val tx = if (onRight) p1.x + 4f * k else p1.x - 4f * k
+                label(s.name, tx, ly, alignRight = !onRight)
+                label(s.time, tx, ly + lineH, alignRight = !onRight)
+            }
             angle += sweep
         }
 
-        // 引线（坐标来自设计稿）
-        listOf(
-            Offset(213f, 132f) to Offset(231f, 146f),
-            Offset(89f, 54f) to Offset(101f, 70f),
-            Offset(119f, 24f) to Offset(128f, 36f)
-        ).forEach { (a, b) ->
-            drawLine(
-                color = PieLabelLine,
-                start = Offset(a.x * k, a.y * k),
-                end = Offset(b.x * k, b.y * k),
-                strokeWidth = 1f * k
-            )
-        }
-
-        // 标签
-        fun label(
-            text: String,
-            x: Float,
-            y: Float,
-            fontSize: Float = 11f,
-            color: Color = PieLabelText,
-            centered: Boolean = false
-        ) {
-            val style = TextStyle(fontSize = fontSize.sp, color = color)
-            val layout = measurer.measure(text, style)
-            val left = if (centered) x * k - layout.size.width / 2f else x * k
+        if (note.isNotBlank()) {
+            val style = TextStyle(fontSize = 11.sp, color = PieNote)
+            val layout = measurer.measure(note, style)
             drawText(
                 textMeasurer = measurer,
-                text = text,
-                topLeft = Offset(left, y * k - fontSize * 0.80f * k),
+                text = note,
+                topLeft = Offset(cx - layout.size.width / 2f, (184f - 11f * 0.8f) * k),
                 style = style
             )
         }
+    }
+}
 
-        label("数学1000题", 186f, 122f)
-        label("36小时51分", 235f, 150f)
-        label("13小时8分", 26f, 46f)
-        label("数学学习", 103f, 76f)
-        label("2小时0分", 48f, 18f)
-        label("英语阅读练习-翻译-作文", 122f, 44f, fontSize = 10f)
-        label("机械学习", 140f, 60f, fontSize = 10f)
-        label(note, 161f, 184f, color = PieNote, centered = true)
+/** 饼图空状态（还没有任何专注记录） */
+@Composable
+fun PieEmpty(modifier: Modifier = Modifier, text: String = "完成一个番茄后，这里会出现分布") {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(120.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = text, fontSize = 12.sp, color = InkMuted)
     }
 }
 

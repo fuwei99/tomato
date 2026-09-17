@@ -73,7 +73,9 @@ fun TaskCard(
     timeSize: TextUnit = 12.sp,
     startLabel: String = "开始",
     contentPadding: PaddingValues = PaddingValues(start = 14.dp, end = 14.dp, top = 13.dp, bottom = 11.dp),
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    /** 传了它，「开始」二字单独可点（整卡不再响应点击） */
+    onStartClick: (() -> Unit)? = null
 ) {
     val textColor = if (visual.lightText) InkLight else White
     val textShadow: Shadow? =
@@ -88,7 +90,7 @@ fun TaskCard(
             .shadow(1.dp, shape)
             .clip(shape)
             .background(visual.brush)
-            .clickable(onClick = onClick)
+            .clickable(enabled = onStartClick == null, onClick = onClick)
     ) {
         visual.decoration?.invoke(this)
 
@@ -113,9 +115,12 @@ fun TaskCard(
                     style = cardTextStyle(timeSize, textColor, FontWeight.Normal, textShadow)
                 )
             }
+            val startModifier =
+                if (onStartClick != null) Modifier.clickable(onClick = onStartClick) else Modifier
             Text(
                 text = startLabel,
-                style = cardTextStyle(titleSize, textColor, FontWeight.Normal, textShadow)
+                style = cardTextStyle(titleSize, textColor, FontWeight.Normal, textShadow),
+                modifier = startModifier.padding(start = 10.dp, top = 6.dp, bottom = 6.dp)
             )
         }
     }
