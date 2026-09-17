@@ -13,8 +13,8 @@ android {
         applicationId = "com.tomato.app"
         minSdk = 26          // Android 8.0+，覆盖 Redmi / HyperOS
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0-demo"
+        versionCode = 3
+        versionName = "0.3.0-demo"
     }
 
     buildTypes {

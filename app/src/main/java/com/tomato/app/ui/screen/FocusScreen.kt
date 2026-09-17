@@ -44,6 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tomato.app.data.model.TimerMode
+import com.tomato.app.focus.FocusPhase
 import com.tomato.app.focus.FocusState
 import com.tomato.app.ui.components.FocusScene
 import com.tomato.app.ui.components.FocusSceneBackground
@@ -65,6 +67,7 @@ fun FocusScreen(
     state: FocusState,
     onMinimize: () -> Unit,      // 返回列表，计时继续
     onToggle: () -> Unit,        // 暂停 / 继续
+    onFinishRound: () -> Unit,   // 正向计时 / 不计时：手动结束本轮
     onReset: () -> Unit,
     onGiveUp: () -> Unit,        // 放弃（按已专注时长落库）
     onFinish: () -> Unit,        // 完成后返回
@@ -144,10 +147,11 @@ fun FocusScreen(
                 FinishBar(onFinish = onFinish)
             } else {
                 FocusControls(
-                    running = state.running,
+                    state = state,
                     onBrightness = { dimIndex = (dimIndex + 1) % dimLevels.size },
                     onScene = { scene = scene.next() },
                     onToggle = onToggle,
+                    onFinishRound = onFinishRound,
                     onReset = onReset,
                     onGiveUp = onGiveUp
                 )
@@ -202,6 +206,9 @@ private fun FocusRing(state: FocusState, modifier: Modifier = Modifier) {
         label = "pulse"
     )
 
+    // 休息阶段换成青绿色，和专注区分开
+    val arcColor = if (state.phase == FocusPhase.BREAK) BreakAccent else White
+
     Box(modifier.size(220.dp), contentAlignment = Alignment.Center) {
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
             val r = size.minDimension / 2f - 8.dp.toPx()
@@ -209,7 +216,7 @@ private fun FocusRing(state: FocusState, modifier: Modifier = Modifier) {
             // 呼吸光晕
             if (state.running) {
                 drawCircle(
-                    color = White.copy(alpha = 0.10f),
+                    color = arcColor.copy(alpha = 0.10f),
                     radius = r * pulse,
                     style = Stroke(width = 20.dp.toPx())
                 )
@@ -220,72 +227,118 @@ private fun FocusRing(state: FocusState, modifier: Modifier = Modifier) {
                 radius = r,
                 style = Stroke(width = 4.dp.toPx())
             )
-            // 剩余进度
-            val sweep = if (state.finished) 360f else 360f * state.progress
-            drawArc(
-                color = White,
-                startAngle = -90f,
-                sweepAngle = sweep,
-                useCenter = false,
-                style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
-            )
-            // 进度头部圆点
-            if (!state.finished && state.progress > 0.005f) {
-                val a = Math.toRadians((-90f + sweep).toDouble())
-                drawCircle(
-                    color = White,
-                    radius = 4.5.dp.toPx(),
-                    center = Offset(
-                        center.x + cos(a).toFloat() * r,
-                        center.y + sin(a).toFloat() * r
-                    )
+
+            /*
+             * 进度弧：
+             * - 倒计时：按剩余比例走
+             * - 休息中 / 已完成：满环
+             * - 正向计时、不计时：只画一小段静态弧，暗示「没有终点」
+             */
+            val sweep = when {
+                state.finished || state.phase == FocusPhase.BREAK -> 360f
+                state.hasRingProgress -> 360f * state.progress
+                state.mode == TimerMode.NONE -> 0f
+                else -> 360f * 0.07f
+            }
+            if (sweep > 0f) {
+                drawArc(
+                    color = arcColor,
+                    startAngle = -90f,
+                    sweepAngle = sweep,
+                    useCenter = false,
+                    style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
                 )
+                // 进度头部圆点（满环时不画，避免首尾重叠）
+                if (sweep < 359f && state.running) {
+                    val a = Math.toRadians((-90f + sweep).toDouble())
+                    drawCircle(
+                        color = arcColor,
+                        radius = 4.5.dp.toPx(),
+                        center = Offset(
+                            center.x + cos(a).toFloat() * r,
+                            center.y + sin(a).toFloat() * r
+                        )
+                    )
+                }
             }
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (state.finished) {
-                Text(
+            when {
+                state.finished -> Text(
                     text = "完成",
                     fontSize = 42.sp,
                     fontWeight = FontWeight.Light,
                     color = White,
                     letterSpacing = 2.sp
                 )
-            } else {
-                Text(
-                    text = formatClock(state.remainMillis),
+
+                state.mode == TimerMode.NONE -> Text(
+                    text = "专注中",
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Light,
+                    color = White,
+                    letterSpacing = 2.sp
+                )
+
+                else -> Text(
+                    text = formatClock(state.displayMillis),
                     fontSize = 46.sp,
                     fontWeight = FontWeight.Light,
                     color = White,
                     letterSpacing = (-1).sp
                 )
             }
+
             Text(
-                text = when {
-                    state.finished -> "又一个番茄，很好"
-                    state.running -> "专注中"
-                    else -> "已暂停"
-                },
+                text = phaseSubtitle(state),
                 fontSize = 12.sp,
                 color = White.copy(alpha = 0.78f),
                 modifier = Modifier.padding(top = 4.dp)
             )
+
+            // 多轮时显示进度角标
+            if (state.cycleTotal > 1 && !state.finished) {
+                Text(
+                    text = "第 ${state.cycleIndex} / ${state.cycleTotal} 轮",
+                    fontSize = 11.sp,
+                    color = White.copy(alpha = 0.62f),
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
         }
     }
 }
 
+private fun phaseSubtitle(state: FocusState): String = when {
+    state.finished -> "又一个番茄，很好"
+    state.phase == FocusPhase.BREAK -> if (state.running) "休息一下" else "休息已暂停"
+    !state.running -> "已暂停"
+    state.mode == TimerMode.STOPWATCH -> "正向计时 · 手动结束"
+    state.mode == TimerMode.NONE -> "不计时 · 手动结束"
+    else -> "专注中"
+}
+
 // ===== 控制栏 =====
 
+/**
+ * 中间槽位随模式变化：
+ * - 倒计时 / 休息：暂停 / 继续
+ * - 正向计时 / 不计时：播放中显示「完成」（手动结束本轮），暂停中显示「继续」
+ */
 @Composable
 private fun FocusControls(
-    running: Boolean,
+    state: FocusState,
     onBrightness: () -> Unit,
     onScene: () -> Unit,
     onToggle: () -> Unit,
+    onFinishRound: () -> Unit,
     onReset: () -> Unit,
     onGiveUp: () -> Unit
 ) {
+    val running = state.running
+    val showFinish = running && state.phase == FocusPhase.FOCUS && state.manualStopOnly
+
     Row(
         Modifier
             .fillMaxWidth()
@@ -299,9 +352,15 @@ private fun FocusControls(
         ControlItem(label = "背景", onClick = onScene) {
             IconImage(tint = White, iconSize = 22.dp)
         }
-        ControlItem(label = if (running) "暂停" else "继续", onClick = onToggle) {
-            if (running) IconPause(tint = White, iconSize = 22.dp)
-            else IconPlay(tint = White, iconSize = 22.dp)
+        ControlItem(
+            label = if (showFinish) "完成" else if (running) "暂停" else "继续",
+            onClick = if (showFinish) onFinishRound else onToggle
+        ) {
+            when {
+                showFinish -> IconCheck(tint = White, iconSize = 22.dp)
+                running -> IconPause(tint = White, iconSize = 22.dp)
+                else -> IconPlay(tint = White, iconSize = 22.dp)
+            }
         }
         ControlItem(label = "重置", onClick = onReset) {
             IconReset(tint = White, iconSize = 22.dp)
@@ -362,9 +421,14 @@ private fun quoteFor(taskId: Long): String {
     return Quotes[if (i < 0) 0 else i]
 }
 
+/** 支持超过 60 分钟（正向计时会跑很久），格式 HH:MM:SS */
 private fun formatClock(ms: Long): String {
     val total = (ms + 999L) / 1000L
-    val m = total / 60L
+    val h = total / 3600L
+    val m = (total % 3600L) / 60L
     val s = total % 60L
-    return "%02d:%02d".format(m, s)
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
 }
+
+/** 休息阶段的强调色 */
+private val BreakAccent = Color(0xFF8BE0C8)

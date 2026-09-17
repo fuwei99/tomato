@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
                         state = focus,
                         onMinimize = { focusHidden = true },
                         onToggle = { if (focus.running) FocusTimer.pause() else FocusTimer.resume() },
+                        onFinishRound = { FocusTimer.finishManually() },
                         onReset = { FocusTimer.reset() },
                         onGiveUp = {
                             FocusTimer.stop()

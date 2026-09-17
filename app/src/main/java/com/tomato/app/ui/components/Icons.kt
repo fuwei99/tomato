@@ -271,3 +271,130 @@ fun IconChevronDown(modifier: Modifier = Modifier, tint: Color, iconSize: Dp = 2
         drawPath(p, tint, style = Stroke(2.6f * s, cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 }
+
+// ===== 详情卡 / 对话框图标 =====
+
+/** 编辑：铅笔 */
+@Composable
+fun IconEdit(modifier: Modifier = Modifier, tint: Color, iconSize: Dp = 24.dp) {
+    CanvasIcon(modifier, tint, iconSize) { s ->
+        val body = Path().apply {
+            moveTo(4.5f * s, 19.5f * s)
+            lineTo(5.6f * s, 15.2f * s)
+            lineTo(15.4f * s, 5.4f * s)
+            lineTo(18.6f * s, 8.6f * s)
+            lineTo(8.8f * s, 18.4f * s)
+            close()
+        }
+        drawPath(body, tint)
+        drawLine(
+            tint, Offset(13.6f * s, 7.2f * s), Offset(16.8f * s, 10.4f * s),
+            1.6f * s, StrokeCap.Round
+        )
+    }
+}
+
+/** 排序：上下双箭头 */
+@Composable
+fun IconSort(modifier: Modifier = Modifier, tint: Color, iconSize: Dp = 24.dp) {
+    CanvasIcon(modifier, tint, iconSize) { s ->
+        drawLine(tint, Offset(7f * s, 20f * s), Offset(7f * s, 4.6f * s), 2f * s, StrokeCap.Round)
+        val up = Path().apply {
+            moveTo(4f * s, 7.6f * s); lineTo(7f * s, 4.2f * s); lineTo(10f * s, 7.6f * s)
+        }
+        drawPath(up, tint, style = Stroke(2f * s, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawLine(tint, Offset(17f * s, 4f * s), Offset(17f * s, 19.4f * s), 2f * s, StrokeCap.Round)
+        val down = Path().apply {
+            moveTo(14f * s, 16.4f * s); lineTo(17f * s, 19.8f * s); lineTo(20f * s, 16.4f * s)
+        }
+        drawPath(down, tint, style = Stroke(2f * s, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+}
+
+/** 删除：垃圾桶 */
+@Composable
+fun IconTrash(modifier: Modifier = Modifier, tint: Color, iconSize: Dp = 24.dp) {
+    CanvasIcon(modifier, tint, iconSize) { s ->
+        drawLine(tint, Offset(4.5f * s, 6.8f * s), Offset(19.5f * s, 6.8f * s), 2f * s, StrokeCap.Round)
+        drawLine(tint, Offset(9.6f * s, 4f * s), Offset(14.4f * s, 4f * s), 2f * s, StrokeCap.Round)
+        val bin = Path().apply {
+            moveTo(6.6f * s, 8.6f * s)
+            lineTo(7.6f * s, 20f * s)
+            lineTo(16.4f * s, 20f * s)
+            lineTo(17.4f * s, 8.6f * s)
+        }
+        drawPath(bin, tint, style = Stroke(1.9f * s, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawLine(tint, Offset(10.4f * s, 11.4f * s), Offset(10.6f * s, 17.4f * s), 1.6f * s, StrokeCap.Round)
+        drawLine(tint, Offset(13.6f * s, 11.4f * s), Offset(13.4f * s, 17.4f * s), 1.6f * s, StrokeCap.Round)
+    }
+}
+
+/** 专注历史记录：带行的列表 */
+@Composable
+fun IconHistory(modifier: Modifier = Modifier, tint: Color, iconSize: Dp = 24.dp) {
+    CanvasIcon(modifier, tint, iconSize) { s ->
+        val w = 2f * s
+        drawLine(tint, Offset(3f * s, 12f * s), Offset(7f * s, 12f * s), w, StrokeCap.Round)
+        drawLine(tint, Offset(3f * s, 6.4f * s), Offset(7f * s, 6.4f * s), w, StrokeCap.Round)
+        drawLine(tint, Offset(3f * s, 17.6f * s), Offset(7f * s, 17.6f * s), w, StrokeCap.Round)
+        drawLine(tint, Offset(10f * s, 12f * s), Offset(21f * s, 12f * s), w, StrokeCap.Round)
+        drawLine(tint, Offset(10f * s, 6.4f * s), Offset(21f * s, 6.4f * s), w, StrokeCap.Round)
+        drawLine(tint, Offset(10f * s, 17.6f * s), Offset(21f * s, 17.6f * s), w, StrokeCap.Round)
+    }
+}
+
+/** 数据统计：柱状图小图标 */
+@Composable
+fun IconGrid(modifier: Modifier = Modifier, tint: Color, iconSize: Dp = 24.dp) {
+    CanvasIcon(modifier, tint, iconSize) { s ->
+        drawRoundRect(tint, Offset(4f * s, 12.6f * s), Size(4f * s, 7.4f * s), CornerRadius(1f * s))
+        drawRoundRect(tint, Offset(10f * s, 7.6f * s), Size(4f * s, 12.4f * s), CornerRadius(1f * s))
+        drawRoundRect(tint, Offset(16f * s, 10.4f * s), Size(4f * s, 9.6f * s), CornerRadius(1f * s))
+    }
+}
+
+/** 小问号（也可用 PromptDot，这个是纯描边版本） */
+@Composable
+fun IconQuestion(modifier: Modifier = Modifier, tint: Color, iconSize: Dp = 24.dp) {
+    CanvasIcon(modifier, tint, iconSize) { s ->
+        drawCircle(tint, 9.4f * s, Offset(12f * s, 12f * s), style = Stroke(width = 1.8f * s))
+        val hook = Path().apply {
+            moveTo(9.4f * s, 9.4f * s)
+            quadraticBezierTo(12f * s, 6.6f * s, 14.6f * s, 9.4f * s)
+            quadraticBezierTo(14.6f * s, 11.4f * s, 12f * s, 12.4f * s)
+            lineTo(12f * s, 13.8f * s)
+        }
+        drawPath(hook, tint, style = Stroke(1.8f * s, cap = StrokeCap.Round))
+        drawCircle(tint, 1.1f * s, Offset(12f * s, 16.6f * s))
+    }
+}
+
+/** 定时功能：闹钟（详情卡顶部三圆图标之一） */
+@Composable
+fun IconAlarm(modifier: Modifier = Modifier, tint: Color, iconSize: Dp = 24.dp) {
+    CanvasIcon(modifier, tint, iconSize) { s ->
+        drawCircle(tint, 7.8f * s, Offset(12f * s, 12.6f * s), style = Stroke(width = 2f * s))
+        drawLine(tint, Offset(12f * s, 12.6f * s), Offset(12f * s, 8.6f * s), 1.8f * s, StrokeCap.Round)
+        drawLine(tint, Offset(12f * s, 12.6f * s), Offset(14.8f * s, 14f * s), 1.8f * s, StrokeCap.Round)
+        drawLine(tint, Offset(3.6f * s, 5.6f * s), Offset(6.4f * s, 3.2f * s), 1.9f * s, StrokeCap.Round)
+        drawLine(tint, Offset(20.4f * s, 5.6f * s), Offset(17.6f * s, 3.2f * s), 1.9f * s, StrokeCap.Round)
+    }
+}
+
+/** 独立白名单：手机图标 */
+@Composable
+fun IconPhone(modifier: Modifier = Modifier, tint: Color, iconSize: Dp = 24.dp) {
+    CanvasIcon(modifier, tint, iconSize) { s ->
+        drawRoundRect(
+            tint, Offset(7f * s, 3f * s), Size(10f * s, 18f * s),
+            CornerRadius(2f * s, 2f * s), style = Stroke(width = 1.9f * s)
+        )
+        drawLine(tint, Offset(10.4f * s, 6.2f * s), Offset(13.6f * s, 6.2f * s), 1.4f * s, StrokeCap.Round)
+        drawCircle(tint, 1.1f * s, Offset(12f * s, 18f * s))
+    }
+}
+
+/** 更换背景：图片（同 IconImage，改名方便语义） */
+@Composable
+fun IconPicture(modifier: Modifier = Modifier, tint: Color, iconSize: Dp = 24.dp) =
+    IconImage(modifier, tint, iconSize)

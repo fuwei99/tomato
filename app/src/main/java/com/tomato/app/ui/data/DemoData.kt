@@ -14,6 +14,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.tomato.app.data.db.TaskEntity
 import com.tomato.app.data.db.TaskListEntity
+import com.tomato.app.data.model.DurationPreset
+import com.tomato.app.data.model.TaskKind
+import com.tomato.app.data.model.TimerMode
 import com.tomato.app.ui.components.BottleDecoration
 import com.tomato.app.ui.components.CardVisual
 import com.tomato.app.ui.components.ChairDecoration
@@ -139,7 +142,11 @@ object DemoSeed {
         val listId: Long,
         val title: String,
         val minutes: Int,
-        val style: String
+        val style: String,
+        val kind: TaskKind = TaskKind.POMODORO,
+        val mode: TimerMode = TimerMode.COUNTDOWN,
+        val cycles: Int = 1,
+        val breakMin: Int = 5
     )
 
     private val rows = listOf(
@@ -157,9 +164,34 @@ object DemoSeed {
         Row(2, "清理房间", 35, "navy")
     )
 
+    /** 新建任务时轮换取用的样式，让新卡片不至于全是一个颜色 */
+    private val newTaskStyleOrder = listOf(
+        "leaf", "petal", "pika", "cloud", "sunset", "moon", "bottle", "sky", "chair"
+    )
+    private var styleCursor = 0
+
+    fun nextStyleKey(): String {
+        val key = newTaskStyleOrder[styleCursor % newTaskStyleOrder.size]
+        styleCursor++
+        return key
+    }
+
     fun tasks(): List<TaskEntity> =
         rows.mapIndexed { i, r ->
-            TaskEntity(listId = r.listId, title = r.title, minutes = r.minutes, styleKey = r.style, sortOrder = i)
+            // 种子写入后把游标推到后面，避免用户新建任务时又撞上已有样式
+            styleCursor = newTaskStyleOrder.size
+            TaskEntity(
+                listId = r.listId,
+                title = r.title,
+                minutes = r.minutes,
+                styleKey = r.style,
+                sortOrder = i,
+                kind = r.kind.ordinal,
+                timerMode = r.mode.ordinal,
+                durationPreset = DurationPreset.of(r.minutes).ordinal,
+                cycleTarget = r.cycles,
+                breakMinutes = r.breakMin
+            )
         }
 }
 

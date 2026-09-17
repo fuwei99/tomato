@@ -67,12 +67,18 @@ fun CollectionsScreen(
 ) {
     // 默认折叠：展开的待办集 id 集合，初始为空
     var expandedIds by remember { mutableStateOf(setOf<Long>()) }
+    var dialog by remember { mutableStateOf<TodoDialog?>(null) }
+    val allTasks = remember(groups) { groups.flatMap { it.tasks } }
 
     Column(modifier.fillMaxSize().background(BgCollections)) {
         AppHeader(title = "待办集") {
             IconBarChart(tint = White, iconSize = 20.dp)
             IconTimer(tint = White, iconSize = 20.dp)
-            IconAddPlus(tint = White, iconSize = 20.dp)
+            IconAddPlus(
+                tint = White,
+                iconSize = 20.dp,
+                modifier = Modifier.clickable { dialog = TodoDialog.Add(null) }
+            )
             IconMoreVert(tint = White, iconSize = 20.dp)
         }
 
@@ -110,7 +116,8 @@ fun CollectionsScreen(
                                 contentPadding = PaddingValues(
                                     start = 12.dp, end = 12.dp, top = 9.dp, bottom = 8.dp
                                 ),
-                                onStartClick = { onStartFocus(task) }
+                                onStartClick = { onStartFocus(task) },
+                                onLongClick = { dialog = TodoDialog.Detail(task.id) }
                             )
                         }
                     }
@@ -118,6 +125,13 @@ fun CollectionsScreen(
             }
         }
     }
+
+    TodoDialogHost(
+        tasks = allTasks,
+        dialog = dialog,
+        onDialogChange = { dialog = it },
+        onStartFocus = onStartFocus
+    )
 }
 
 /**
