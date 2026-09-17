@@ -39,6 +39,10 @@ import com.tomato.app.ui.components.SunsetDecoration
 internal fun diag(c1: Color, c2: Color, c3: Color): Brush =
     Brush.linearGradient(listOf(c1, c2, c3), start = Offset.Zero, end = Offset.Infinite)
 
+/** 两段斜向渐变（待办集卡片） */
+internal fun diag(c1: Color, c2: Color): Brush =
+    Brush.linearGradient(listOf(c1, c2), start = Offset.Zero, end = Offset.Infinite)
+
 /** 竖向渐变（180deg） */
 internal fun vert(c1: Color, c2: Color, c3: Color): Brush =
     Brush.verticalGradient(listOf(c1, c2, c3))
